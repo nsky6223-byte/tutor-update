@@ -1,6 +1,4 @@
 // netlify/functions/gemini.js
-const fetch = require('node-fetch');
-
 exports.handler = async function (event) {
     // CORS preflight 요청 처리
     if (event.httpMethod === 'OPTIONS') {
@@ -42,8 +40,8 @@ exports.handler = async function (event) {
             return { statusCode: 400, body: JSON.stringify({ error: "이미지 데이터가 전송되지 않았습니다." }) };
         }
 
-        // 스트리밍 엔드포인트 사용 (더 빠른 응답)
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:streamGenerateContent?key=${apiKey}`;
+        // 일반 엔드포인트 사용 (더 안정적)
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
         
         const systemPrompt = `너는 수학 문제 풀이 전문가야. 이미지 속 문제를 읽고, 다음 마크다운 형식에 맞춰서 답변해 줘. 수학 수식은 LaTeX 형식으로 작성해 줘:
 
@@ -72,18 +70,20 @@ exports.handler = async function (event) {
             }
         };
 
+        console.log("Sending request to Gemini API...");
         const geminiResponse = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
 
+        console.log("Gemini API response status:", geminiResponse.status);
+
         // Gemini API 요청 자체에 실패했는지 확인
         if (!geminiResponse.ok) {
             const errorText = await geminiResponse.text();
             console.error("Gemini API Error:", errorText);
             console.error("Response status:", geminiResponse.status);
-            console.error("Response headers:", geminiResponse.headers);
             return {
                 statusCode: geminiResponse.status,
                 headers: { 
@@ -98,48 +98,27 @@ exports.handler = async function (event) {
             };
         }
         
-        // 스트리밍 응답 처리
-        const reader = geminiResponse.body.getReader();
-        const decoder = new TextDecoder();
-        let fullText = '';
+        // 일반 JSON 응답 처리
+        const geminiData = await geminiResponse.json();
+        console.log("Gemini API response received");
         
-        try {
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                
-                const chunk = decoder.decode(value);
-                const lines = chunk.split('\n');
-                
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        const data = line.slice(6);
-                        if (data === '[DONE]') break;
-                        
-                        try {
-                            const parsed = JSON.parse(data);
-                            const textContent = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
-                            if (textContent) {
-                                fullText += textContent;
-                            }
-                        } catch (e) {
-                            // JSON 파싱 오류 무시 (부분 데이터)
-                        }
-                    }
-                }
-            }
-        } finally {
-            reader.releaseLock();
-        }
+        const textContent = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
         
-        if (!fullText) {
+        if (!textContent) {
+            console.error("No text content in response:", geminiData);
             return {
                 statusCode: 500,
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type'
+                },
                 body: JSON.stringify({ error: "AI 응답을 처리할 수 없습니다." })
             };
         }
 
         // 성공 응답
+        console.log("Sending success response");
         return {
             statusCode: 200,
             headers: { 
@@ -149,15 +128,24 @@ exports.handler = async function (event) {
             },
             body: JSON.stringify({ 
                 success: true, 
-                content: fullText 
+                content: textContent 
             })
         };
 
     } catch (error) {
         console.error("Server function error:", error);
+        console.error("Error stack:", error.stack);
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: error.message || "서버에서 처리 중 오류가 발생했습니다." })
+            headers: { 
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type'
+            },
+            body: JSON.stringify({ 
+                error: error.message || "서버에서 처리 중 오류가 발생했습니다.",
+                details: error.stack
+            })
         };
     }
 };
