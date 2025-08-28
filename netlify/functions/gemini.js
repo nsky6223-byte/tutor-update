@@ -1,4 +1,6 @@
 // netlify/functions/gemini.js
+const fetch = require('node-fetch');
+
 exports.handler = async function (event) {
     // CORS preflight 요청 처리
     if (event.httpMethod === 'OPTIONS') {
@@ -19,9 +21,15 @@ exports.handler = async function (event) {
     }
 
     try {
+        console.log("Function started");
+        console.log("Event body:", event.body ? "Present" : "Missing");
+        
         const { base64ImageData } = JSON.parse(event.body);
+        console.log("Base64 image data length:", base64ImageData ? base64ImageData.length : "Missing");
+        
         // Netlify 환경 변수에서 API 키를 가져옴
         const apiKey = process.env.GEMINI_API_KEY;
+        console.log("API Key present:", apiKey ? "Yes" : "No");
 
         if (!apiKey) {
             console.error("GEMINI_API_KEY is not set in Netlify environment variables.");
@@ -74,9 +82,19 @@ exports.handler = async function (event) {
         if (!geminiResponse.ok) {
             const errorText = await geminiResponse.text();
             console.error("Gemini API Error:", errorText);
+            console.error("Response status:", geminiResponse.status);
+            console.error("Response headers:", geminiResponse.headers);
             return {
                 statusCode: geminiResponse.status,
-                body: JSON.stringify({ error: `Gemini API 오류: ${errorText}` })
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type'
+                },
+                body: JSON.stringify({ 
+                    error: `Gemini API 오류: ${errorText}`,
+                    status: geminiResponse.status
+                })
             };
         }
         

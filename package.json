@@ -1,0 +1,26 @@
+{
+  "name": "math-tutor-automation",
+  "version": "1.0.0",
+  "description": "수학 학원 조교 업무 자동화 시스템",
+  "main": "index.html",
+  "scripts": {
+    "dev": "netlify dev",
+    "build": "echo 'No build step required'",
+    "deploy": "netlify deploy --prod"
+  },
+  "keywords": [
+    "math",
+    "tutor",
+    "automation",
+    "ai",
+    "gemini"
+  ],
+  "author": "nsky6223-byte",
+  "license": "MIT",
+  "devDependencies": {
+    "@netlify/functions": "^2.0.0"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  }
+}
