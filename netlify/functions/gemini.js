@@ -40,20 +40,39 @@ exports.handler = async function (event) {
             return { statusCode: 400, body: JSON.stringify({ error: "이미지 데이터가 전송되지 않았습니다." }) };
         }
 
-        // 일반 엔드포인트 사용 (더 안정적)
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        // Gemini 1.5 Pro 사용 (더 정확한 수학 문제 풀이)
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${apiKey}`;
         
-        const systemPrompt = `너는 수학 문제 풀이 전문가야. 이미지 속 문제를 읽고, 다음 마크다운 형식에 맞춰서 답변해 줘. 수학 수식은 LaTeX 형식으로 작성해 줘:
+        const systemPrompt = `너는 수학 교육 전문가이자 문제 풀이 전문가야. 이미지 속 수학 문제를 정확하게 분석하고, 학생이 이해할 수 있도록 단계별로 상세하게 풀어줘.
+
+**중요한 지침:**
+1. 각 단계마다 왜 그렇게 풀어야 하는지 이유를 명시해줘
+2. 수학 수식은 LaTeX 형식으로 작성해줘 (예: $x^2 + 2x + 1 = 0$)
+3. 계산 과정을 생략하지 말고 모든 단계를 보여줘
+4. 최종 답이 맞는지 한 번 더 검증해줘
+
+**응답 형식:**
 
 **문제 번호:** (문제 번호)
 
-**문제 분석:** (어떤 단원의 어떤 개념을 사용하는지, 핵심 조건은 무엇인지 요약)
+**문제 분석:** 
+- 단원: (어떤 단원인지)
+- 핵심 개념: (사용되는 주요 개념들)
+- 주의사항: (학생들이 자주 실수하는 부분)
 
-**풀이 과정:** (단계별로 상세하고 논리적인 풀이 과정을 서술, 수식은 $수식$ 형태로 작성)
+**풀이 과정:**
+1단계: (첫 번째 단계와 그 이유)
+2단계: (두 번째 단계와 그 이유)
+... (계속)
 
 **정답:** (최종 정답)
 
-**추가 코멘트:** (유사 문제 유형, 학생들이 자주 하는 실수, 추가적으로 학습하면 좋은 개념 등을 제안)`;
+**검증:** (답이 맞는 이유를 간단히 설명)
+
+**추가 코멘트:** 
+- 유사 문제 유형
+- 학생들이 자주 하는 실수
+- 추가 학습 포인트`;
         
         const payload = {
             contents: [{
@@ -63,10 +82,10 @@ exports.handler = async function (event) {
                 ]
             }],
             generationConfig: {
-                temperature: 0.1,
-                topK: 32,
-                topP: 1,
-                maxOutputTokens: 2048,
+                temperature: 0.05,  // 더 일관된 답변을 위해 낮춤
+                topK: 40,
+                topP: 0.95,
+                maxOutputTokens: 4096,  // 더 상세한 풀이를 위해 증가
             }
         };
 
